@@ -993,7 +993,7 @@ encoder.dateEncodingStrategy = .formatted(formatter)`);
                     this.emitBlockWithAccess("var rawValue: String", () => {
                         this.emitBlock("switch self", () => {
                             this.forEachEnumCase(e, "none", (name, jsonName) => {
-                                this.emitLine("case ", name, ":")
+                                this.emitLine("case .", name, ":")
                                 this.indent(() => {
                                     this.emitLine('return "', stringEscape(jsonName), '"')
                                 })
@@ -1002,21 +1002,18 @@ encoder.dateEncodingStrategy = .formatted(formatter)`);
                     })
 
                     this.emitBlockWithAccess("init?(rawValue: String)", () => {
-                        this.emitBlock("switch self", () => {
-                            this.forEachEnumCase(e, "none", (name, jsonName, position) => {
+                        this.emitBlock("switch rawValue", () => {
+                            this.forEachEnumCase(e, "none", (name, jsonName) => {
                                 this.emitLine('case "', stringEscape(jsonName), '":')
                                 this.indent(() => {
                                     this.emitLine("self = .", name)
                                 });
-
-                                if (position == "last") {
-                                    this.emitLine('case default:')
-                                    this.indent(() => {
-                                        this.emitLine("self = .", name)
-                                    });
-                                }
-
                             })
+
+                            this.emitLine('default:')
+                            this.indent(() => {
+                                this.emitLine("return nil")
+                            });
 
 
                         })
