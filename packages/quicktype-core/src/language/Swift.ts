@@ -42,6 +42,7 @@ import { StringTypeMapping } from "../TypeBuilder";
 import { panic } from "../support/Support";
 import { DefaultDateTimeRecognizer, DateTimeRecognizer } from "../DateTime";
 import { acronymOption, acronymStyle, AcronymStyleOptions } from "../support/Acronyms";
+import { json } from "stream/consumers";
 
 const MAX_SAMELINE_PROPERTIES = 4;
 
@@ -943,8 +944,17 @@ encoder.dateEncodingStrategy = .formatted(formatter)`);
 
         const protocols: string[] = [];
         if (!this._options.justTypes) {
-            protocols.push("String"); // Not a protocol
+
+            if (this._options.objcSupport) {
+                protocols.push("Int");
+                protocols.push("RawRepresentable");
+            } else {
+                protocols.push("String");
+            }
+
+
             protocols.push("Codable");
+
         }
 
         if (this._options.protocol.hashable) {
@@ -964,10 +974,56 @@ encoder.dateEncodingStrategy = .formatted(formatter)`);
                 });
             });
         } else {
+            if (this._options.objcSupport) {
+                this.emitLine("@objc")
+            }
             this.emitBlockWithAccess(["enum ", enumName, protocolString], () => {
                 this.forEachEnumCase(e, "none", (name, jsonName) => {
-                    this.emitLine("case ", name, ' = "', stringEscape(jsonName), '"');
+                    if (this._options.objcSupport) {
+                        this.emitLine("case ", name);
+                    } else {
+                        this.emitLine("case ", name, ' = "', stringEscape(jsonName), '"');
+                    }
                 });
+
+                if (this._options.objcSupport) {
+                    this.ensureBlankLine()
+                    this.emitLine(this.accessLevel, "typealias RawValue = String")
+                    this.ensureBlankLine()
+
+                    this.emitBlockWithAccess("var rawValue: String", () => {
+                        this.emitBlock("switch self", () => {
+                            this.forEachEnumCase(e, "none", (name, jsonName) => {
+                                this.emitLine("case ", name, ":")
+                                this.indent(() => {
+                                    this.emitLine('return "', stringEscape(jsonName), '"')
+                                })
+                            })
+                        })
+                    })
+
+                    this.emitBlockWithAccess("init?(rawValue: String)", () => {
+                        this.emitBlock("switch self", () => {
+                            this.forEachEnumCase(e, "none", (name, jsonName, position) => {
+                                this.emitLine('case "', stringEscape(jsonName), '":')
+                                this.indent(() => {
+                                    this.emitLine("self = .", name)
+                                });
+
+                                if (position == "last") {
+                                    this.emitLine('case default:')
+                                    this.indent(() => {
+                                        this.emitLine("self = .", name)
+                                    });
+                                }
+
+                            })
+
+
+                        })
+                    })
+                }
+
             });
         }
 
