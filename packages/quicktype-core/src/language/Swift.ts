@@ -42,7 +42,6 @@ import { StringTypeMapping } from "../TypeBuilder";
 import { panic } from "../support/Support";
 import { DefaultDateTimeRecognizer, DateTimeRecognizer } from "../DateTime";
 import { acronymOption, acronymStyle, AcronymStyleOptions } from "../support/Acronyms";
-import { json } from "stream/consumers";
 
 const MAX_SAMELINE_PROPERTIES = 4;
 
